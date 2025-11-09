@@ -1,0 +1,2 @@
+date_time,symbol,action,price,quantity,strategy,remarks
+2025-11-09 09:30:00,RELIANCE.NS,BUY,2520.5,10,ma_crossover,Signal generated automatically
