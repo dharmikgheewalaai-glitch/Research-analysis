@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -8,10 +8,9 @@ import yaml
 # =====================
 # Set project root for imports
 # =====================
-BASE_DIR = r"C:\Users\Acer\OneDrive\Desktop\AURA\Tracker"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(BASE_DIR)
 
-# Import after appending path
 from services.data_fetcher import fetch_from_yahoo, load_from_csv
 from strategy.strategies import MA_Crossover, RSI_MA_Combo, BreakoutStrategy
 
@@ -49,4 +48,10 @@ elif strategy_option == "Breakout":
 
 # Display signals
 st.subheader("Signals")
-st.datafr
+st.dataframe(signals.tail(10))
+
+# Save signals to CSV (paper trading log)
+signals["date_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+signals.to_csv(TRADES_FILE, mode="a", header=False, index=False)
+
+st.success(f"Signals logged to {TRADES_FILE}")

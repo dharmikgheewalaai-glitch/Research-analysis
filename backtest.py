@@ -1,12 +1,12 @@
-import sys
 import os
+import sys
 import pandas as pd
 import yaml
 
 # =====================
 # Set project root for imports
 # =====================
-BASE_DIR = r"C:\Users\Acer\OneDrive\Desktop\AURA\Tracker"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(BASE_DIR)
 
 from strategy.strategies import MA_Crossover, RSI_MA_Combo, BreakoutStrategy
