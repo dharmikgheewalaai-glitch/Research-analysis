@@ -1,81 +1,31 @@
-# strategy/strategies.py
 import pandas as pd
-import numpy as np
+import talib
 
-class MA_Crossover:
-    def __init__(self, fast=7, slow=21):
-        assert fast < slow, "fast must be smaller than slow"
-        self.fast = fast
-        self.slow = slow
+def MA_Crossover(data, params):
+    short_window = params["short_window"]
+    long_window = params["long_window"]
+    data["MA_Short"] = data["Close"].rolling(short_window).mean()
+    data["MA_Long"] = data["Close"].rolling(long_window).mean()
+    data["Signal"] = 0
+    data.loc[data["MA_Short"] > data["MA_Long"], "Signal"] = 1
+    data.loc[data["MA_Short"] < data["MA_Long"], "Signal"] = -1
+    return data[["Date","Close","Signal"]]
 
-    def prepare(self, df: pd.DataFrame) -> pd.DataFrame:
-        df = df.copy()
-        df["ma_fast"] = df["close"].rolling(self.fast).mean()
-        df["ma_slow"] = df["close"].rolling(self.slow).mean()
-        df["signal"] = 0
-        df.loc[df["ma_fast"] > df["ma_slow"], "signal"] = 1
-        df.loc[df["ma_fast"] < df["ma_slow"], "signal"] = -1
-        df["signal_change"] = df["signal"].diff().fillna(0)
-        df["trade_signal"] = df["signal_change"].apply(lambda x: "BUY" if x > 0 else ("SELL" if x < 0 else None))
-        return df
+def RSI_MA_Combo(data, params):
+    rsi_period = params["rsi_period"]
+    ma_period = params["ma_period"]
+    data["RSI"] = talib.RSI(data["Close"], timeperiod=rsi_period)
+    data["MA"] = data["Close"].rolling(ma_period).mean()
+    data["Signal"] = 0
+    data.loc[(data["Close"] > data["MA"]) & (data["RSI"] > 50), "Signal"] = 1
+    data.loc[(data["Close"] < data["MA"]) & (data["RSI"] < 50), "Signal"] = -1
+    return data[["Date","Close","Signal"]]
 
-    def last_signal(self, df: pd.DataFrame):
-        if df.empty: return None
-        return df["trade_signal"].iloc[-1]
-
-class RSI_MA_Combo:
-    def __init__(self, fast=7, slow=21, rsi_window=14):
-        self.fast = fast
-        self.slow = slow
-        self.rsi_window = rsi_window
-
-    def _rsi(self, series: pd.Series, window: int=14):
-        delta = series.diff()
-        up = delta.clip(lower=0)
-        down = -1*delta.clip(upper=0)
-        ma_up = up.ewm(alpha=1/window, adjust=False).mean()
-        ma_down = down.ewm(alpha=1/window, adjust=False).mean()
-        rs = ma_up / (ma_down + 1e-9)
-        rsi = 100 - (100 / (1 + rs))
-        return rsi
-
-    def prepare(self, df: pd.DataFrame) -> pd.DataFrame:
-        df = df.copy()
-        df["ma_fast"] = df["close"].rolling(self.fast).mean()
-        df["ma_slow"] = df["close"].rolling(self.slow).mean()
-        df["rsi"] = self._rsi(df["close"], self.rsi_window)
-        # signal: buy when rsi > 50 and ma_fast > ma_slow; sell when rsi < 50 and ma_fast < ma_slow
-        df["trade_signal"] = None
-        cond_buy = (df["rsi"] > 50) & (df["ma_fast"] > df["ma_slow"])
-        cond_sell = (df["rsi"] < 50) & (df["ma_fast"] < df["ma_slow"])
-        # mark only crossovers: detect change in cond
-        df["cond"] = 0
-        df.loc[cond_buy, "cond"] = 1
-        df.loc[cond_sell, "cond"] = -1
-        df["cond_change"] = df["cond"].diff().fillna(0)
-        df.loc[df["cond_change"] > 0, "trade_signal"] = "BUY"
-        df.loc[df["cond_change"] < 0, "trade_signal"] = "SELL"
-        return df
-
-    def last_signal(self, df: pd.DataFrame):
-        if df.empty: return None
-        return df["trade_signal"].iloc[-1]
-
-class BreakoutStrategy:
-    def __init__(self, n=20):
-        self.n = n
-
-    def prepare(self, df: pd.DataFrame) -> pd.DataFrame:
-        df = df.copy()
-        df["n_high"] = df["high"].rolling(self.n).max().shift(1)
-        df["n_low"] = df["low"].rolling(self.n).min().shift(1)
-        df["trade_signal"] = None
-        df.loc[df["close"] > df["n_high"], "trade_signal"] = "BUY"
-        df.loc[df["close"] < df["n_low"], "trade_signal"] = "SELL"
-        # keep only first breakout until reversal: detect changes
-        df["trade_signal"] = df["trade_signal"].where(df["trade_signal"] != df["trade_signal"].shift(1))
-        return df
-
-    def last_signal(self, df: pd.DataFrame):
-        if df.empty: return None
-        return df["trade_signal"].iloc[-1]
+def BreakoutStrategy(data, params):
+    lookback = params["lookback_period"]
+    data["High_Max"] = data["High"].rolling(lookback).max()
+    data["Low_Min"] = data["Low"].rolling(lookback).min()
+    data["Signal"] = 0
+    data.loc[data["Close"] > data["High_Max"].shift(1), "Signal"] = 1
+    data.loc[data["Close"] < data["Low_Min"].shift(1), "Signal"] = -1
+    return data[["Date","Close","Signal"]]
