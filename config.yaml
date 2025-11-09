@@ -1,0 +1,27 @@
+# ===============================
+# Streamlit Trading App Settings
+# ===============================
+
+# Symbol and timeframe
+symbol: "RELIANCE.NS"
+interval: "1d"            # Options: 1m, 5m, 15m, 1h, 1d
+refresh_seconds: 60       # Auto-refresh frequency (in seconds)
+
+# Strategy Parameters
+strategies:
+  ma_crossover:
+    short_window: 20
+    long_window: 50
+  rsi_ma:
+    rsi_period: 14
+    ma_period: 50
+    rsi_buy_level: 50
+    rsi_sell_level: 50
+  breakout:
+    lookback_period: 20
+    stop_loss_pct: 0.03
+    take_profit_pct: 0.07
+
+# Risk Management
+position_size: 10         # Quantity per trade
+capital: 100000           # Paper-trading capital for calculations
